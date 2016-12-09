@@ -1,25 +1,37 @@
 package io.anserini.rts;
 
+import io.anserini.embeddings.search.SearchW2V;
+import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.kohsuke.args4j.*;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.TimeZone;
-import java.util.Timer;
-import java.util.TimerTask;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.io.FileUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import java.util.*;
 
 public class TRECSearcher {
+  public static class SearchArgs {
+    @Option(name = "-host", metaVar = "[String]", required = true, usage = "path to model file")
+    public String host;
+
+    @Option(name = "-index", metaVar = "[file]", required = true, usage = "number of nearest words")
+    public String index;
+
+    @Option(name = "-port", metaVar = "[String]", required = true, usage = "input word")
+    public String port;
+
+    @Option(name = "-groupid", metaVar = "[String]", required = true, usage = "input file with one word per line")
+    public String groupid;
+
+    //optional arguments
+    @Option(name = "-real", metaVar = "[String]", required = true, usage = "input file with one word per line")
+    public boolean batch = true;
+
+  }
+
   public static final Logger LOG = LogManager.getLogger(TRECSearcher.class);
 
   private static final String HOST_OPTION = "host";
@@ -63,31 +75,21 @@ public class TRECSearcher {
   }
 
   public static void main(String[] args) throws Exception {
-    Options options = new Options();
-    options.addOption(HOST_OPTION, true, "host");
-    options.addOption(INDEX_OPTION, true, "index path");
-    options.addOption(PORT_OPTION, true, "port");
-    options.addOption(GROUPID_OPTION, true, "groupid");
+    final SearchArgs searchArgs = new SearchArgs();
+    CmdLineParser parser = new CmdLineParser(searchArgs, ParserProperties.defaults().withUsageWidth(90));
 
-    CommandLine cmdline = null;
-    CommandLineParser parser = new GnuParser();
     try {
-      cmdline = parser.parse(options, args);
-    } catch (org.apache.commons.cli.ParseException e) {
-      System.err.println("Error parsing command line: " + e.getMessage());
-      System.exit(-1);
+      parser.parseArgument(args);
+    } catch (CmdLineException e) {
+      System.err.println(e.getMessage());
+      parser.printUsage(System.err);
+      System.err.println("Example: " + SearchW2V.class.getSimpleName() + parser.printExample(OptionHandlerFilter.REQUIRED));
+      return;
     }
 
-    if (!cmdline.hasOption(HOST_OPTION) || !cmdline.hasOption(INDEX_OPTION) || !cmdline.hasOption(PORT_OPTION)
-        || !cmdline.hasOption(GROUPID_OPTION)) {
-      HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp(TRECSearcher.class.getName(), options);
-      System.exit(-1);
-    }
-
-    String host = cmdline.getOptionValue(HOST_OPTION);
-    groupid = cmdline.getOptionValue(GROUPID_OPTION);
-    int port = Integer.parseInt(cmdline.getOptionValue(PORT_OPTION));
+    String host = searchArgs.host;
+    groupid = searchArgs.groupid;
+    int port = Integer.parseInt(searchArgs.port);
     api_base = new String("http://" + host + ":" + port + "/");
 
     clientid = Registrar.register(api_base, groupid, alias);
