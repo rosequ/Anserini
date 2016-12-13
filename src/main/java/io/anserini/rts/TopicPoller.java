@@ -1,24 +1,23 @@
 package io.anserini.rts;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
+import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import twitter4j.JSONArray;
+import twitter4j.JSONException;
+import twitter4j.JSONObject;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
-
-import twitter4j.JSONArray;
-import twitter4j.JSONException;
-import twitter4j.JSONObject;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Scanner;
 
 public class TopicPoller {
 
@@ -64,6 +63,36 @@ public class TopicPoller {
       }
     return null;
 
+  }
+
+  public static TRECTopic[] getTopicsFromFile(String interestProfilePath)
+      throws Exception {
+    TRECTopic[] topics;
+    String jsonString = "";
+
+    try {
+      jsonString = new Scanner(new File("src/main/resources/profiles/TREC2015-MB-eval-topics.json")).useDelimiter("\\Z").next();
+    } catch (IOException e){
+      System.err.println(e.getMessage());
+    }
+
+    ObjectMapper mapper = new ObjectMapper();
+    topics = mapper.readValue(jsonString, TypeFactory.defaultInstance().constructArrayType(TRECTopic.class));
+
+    LOG.info(topics.toString());
+    File file = new File(interestProfilePath);
+    boolean isDirectoryCreated = file.mkdir();
+    if (isDirectoryCreated) {
+      LOG.info("Interest profile directory successfully made");
+    } else {
+      FileUtils.deleteDirectory(file);
+      file.mkdir();
+      LOG.info("Interest profile directory successfully covered");
+    }
+    for (int i = 0; i < topics.length; i++) {
+      writeTRECTopicToDisk(topics[i]);
+    }
+    return topics;
   }
 
   /*

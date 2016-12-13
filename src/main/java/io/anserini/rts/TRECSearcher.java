@@ -1,6 +1,5 @@
 package io.anserini.rts;
 
-import io.anserini.embeddings.search.SearchW2V;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -10,34 +9,30 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class TRECSearcher {
   public static class SearchArgs {
-    @Option(name = "-host", metaVar = "[String]", required = true, usage = "path to model file")
+    @Option(name = "-host", metaVar = "[String]", required = true, usage = "host details")
     public String host;
 
-    @Option(name = "-index", metaVar = "[file]", required = true, usage = "number of nearest words")
+    @Option(name = "-index", metaVar = "[file]", required = true, usage = "path to the index")
     public String index;
 
-    @Option(name = "-port", metaVar = "[String]", required = true, usage = "input word")
+    @Option(name = "-port", metaVar = "[String]", required = true, usage = "port details")
     public String port;
 
-    @Option(name = "-groupid", metaVar = "[String]", required = true, usage = "input file with one word per line")
+    @Option(name = "-groupid", metaVar = "[String]", required = true, usage = "groupid details")
     public String groupid;
 
     //optional arguments
-    @Option(name = "-real", metaVar = "[String]", required = true, usage = "input file with one word per line")
+    @Option(name = "-batch", required = true, forbids = {"-host", "-index", "-port", "-groupid"},
+        usage = "batch evaluation if specified")
     public boolean batch = true;
-
   }
 
   public static final Logger LOG = LogManager.getLogger(TRECSearcher.class);
-
-  private static final String HOST_OPTION = "host";
-  private static final String INDEX_OPTION = "index";
-  private static final String PORT_OPTION = "port";
-  private static final String GROUPID_OPTION = "groupid";
 
   static BufferedWriter scenarioALogWriter;
   static BufferedWriter scenarioBLogWriter;
@@ -76,35 +71,54 @@ public class TRECSearcher {
 
   public static void main(String[] args) throws Exception {
     final SearchArgs searchArgs = new SearchArgs();
-    CmdLineParser parser = new CmdLineParser(searchArgs, ParserProperties.defaults().withUsageWidth(90));
+//    CmdLineParser parser = new CmdLineParser(searchArgs, ParserProperties.defaults().withUsageWidth(90));
+    final String INDEX_OPTION = "index";
 
-    try {
-      parser.parseArgument(args);
-    } catch (CmdLineException e) {
-      System.err.println(e.getMessage());
-      parser.printUsage(System.err);
-      System.err.println("Example: " + SearchW2V.class.getSimpleName() + parser.printExample(OptionHandlerFilter.REQUIRED));
-      return;
+    Calendar now;
+    Calendar tomorrow;
+//
+//    try {
+//      parser.parseArgument(args);
+//    } catch (CmdLineException e) {
+//      System.err.println(e.getMessage());
+//      parser.printUsage(System.err);
+//      System.err.println("Example: " + SearchArgs.class.getSimpleName() + parser.printExample(OptionHandlerFilter.REQUIRED));
+//      return;
+//    }
+
+    SimpleDateFormat sdf = new SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy", Locale.ENGLISH);
+    searchArgs.batch = true;
+    if (!searchArgs.batch) {
+      String host = searchArgs.host;
+      groupid = searchArgs.groupid;
+      int port = Integer.parseInt(searchArgs.port);
+      api_base = new String("http://" + host + ":" + port + "/");
+
+      clientid = Registrar.register(api_base, groupid, alias);
+      topics = TopicPoller.getInitialTopics(api_base, clientid, interestProfilePath);
+
+      now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+      tomorrow = Calendar.getInstance();
+    } else {
+      //read the interest profile from the local disk
+      topics = TopicPoller.getTopicsFromFile(interestProfilePath);
+
+      // go back in time
+      now = Calendar.getInstance();
+      now.setTime(sdf.parse("Mon Aug 1 00:00:00 UTC 2016"));
+      // System.out.println(sdf.format(now.getTime()));
+      tomorrow = now;
     }
 
-    String host = searchArgs.host;
-    groupid = searchArgs.groupid;
-    int port = Integer.parseInt(searchArgs.port);
-    api_base = new String("http://" + host + ":" + port + "/");
-
-    clientid = Registrar.register(api_base, groupid, alias);
-    topics = TopicPoller.getInitialTopics(api_base, clientid, interestProfilePath);
-    indexName = Indexer.StartIndexing(INDEX_OPTION);
-
-    Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-
-    Calendar tomorrow = Calendar.getInstance();
     tomorrow.set(Calendar.HOUR, 0);
     tomorrow.set(Calendar.MINUTE, 0);
     tomorrow.set(Calendar.SECOND, 0);
     tomorrow.set(Calendar.AM_PM, Calendar.AM);
+    tomorrow.set(Calendar.DATE, now.get(Calendar.DATE) + 1);
     tomorrow.set(Calendar.DAY_OF_YEAR, now.get(Calendar.DAY_OF_YEAR) + 1);
     tomorrow.setTimeZone(TimeZone.getTimeZone("UTC"));
+//    System.out.println(sdf.format(tomorrow.getTime()));
+    indexName = Indexer.StartIndexing(INDEX_OPTION);
 
     File file = new File(scenarioLogPath);
     boolean isDirectoryCreated = file.mkdir();
