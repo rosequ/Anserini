@@ -137,11 +137,6 @@
               <mainClass>io.anserini.qa.RetrieveSentences</mainClass>
               <name>RetrieveSentences</name>
             </program>
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> 0b9b484e9f5f9d8568abcb91aa6b305c3bb17b17
           </programs>
         </configuration>
       </plugin>
