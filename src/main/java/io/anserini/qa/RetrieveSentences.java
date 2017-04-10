@@ -22,6 +22,7 @@ import io.anserini.qa.passage.ScoredPassage;
 import io.anserini.rerank.ScoredDocuments;
 import io.anserini.search.query.QaTopicReader;
 import io.anserini.util.AnalyzerUtils;
+import net.sourceforge.argparse4j.annotation.Arg;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
@@ -36,10 +37,7 @@ import org.apache.lucene.search.similarities.Similarity;
 import org.apache.lucene.store.FSDirectory;
 import org.kohsuke.args4j.*;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -72,6 +70,9 @@ public class RetrieveSentences {
 
     @Option(name = "-k", metaVar = "[number]", usage = "top-k passages to be retrieved")
     public int k = 1;
+
+    @Option(name = "-config", metaVar = "[string]", usage = "[dev|train|test]")
+    public String config = "dev";
   }
 
   private final IndexReader reader;
@@ -155,6 +156,27 @@ public class RetrieveSentences {
     return scoredDocs;
   }
 
+  public void getIDFPassages(Args qaArgs) throws Exception {
+    BufferedReader question = new BufferedReader(new FileReader(qaArgs.config + "/a.toks"));
+    BufferedReader answer = new BufferedReader(new FileReader(qaArgs.config + "/b.toks"));
+    BufferedReader idFile = new BufferedReader(new FileReader(qaArgs.config + "/id.txt"));
+    FileWriter outFile = new FileWriter(qaArgs.config + ".eval");
+
+    int count = 0;
+    while (true) {
+      String partOne = question.readLine();
+      String partTwo = answer.readLine();
+      String id = idFile.readLine();
+
+      if (partOne == null || partTwo == null || id == null)
+        break;
+
+      System.out.println(id + " 0 " + count + " 0 " + scorer.getIDF(partOne, partTwo) + " smmodel");
+      outFile.write(id + " 0 " + count + " 0 " + scorer.getIDF(partOne, partTwo) + " smmodel\n");
+      count += 1;
+    }
+  }
+
   public static void main(String[] args) throws Exception {
     Args qaArgs = new Args();
     CmdLineParser parser = new CmdLineParser(qaArgs, ParserProperties.defaults().withUsageWidth(90));
@@ -174,6 +196,7 @@ public class RetrieveSentences {
     }
 
     RetrieveSentences rs = new RetrieveSentences(qaArgs);
-    rs.getRankedPassages(qaArgs);
+//    rs.getRankedPassages(qaArgs);
+    rs.getIDFPassages(qaArgs);
   }
 }

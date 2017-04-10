@@ -7,7 +7,6 @@ from nltk.tokenize import TreebankWordTokenizer
 from pyserini import Pyserini
 from castorini_smmodel_bridge import SMModelBridge
 
-
 path_to_castorini = "/Users/royalsequeira/Castorini"  # change this path
 model = SMModelBridge(path_to_castorini + '/models/sm_model/sm_model.no_ext_feats',
                         path_to_castorini + '/data/word2vec/aquaint+wiki.txt.gz.ndim=50.cache',
@@ -63,9 +62,7 @@ def score_candidates(candidates, answers):
         scored_candidates[this_candidate] = (answer, similarity)
       elif similarity > scored_candidates[this_candidate][1]:
         scored_candidates[this_candidate] = (answer, similarity)
-
   return scored_candidates
-
 
 def load_data(fname):
   questions = []

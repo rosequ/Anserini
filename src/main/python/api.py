@@ -1,12 +1,11 @@
 import argparse
 import configparser
 import os
-import sys 
+import sys
 
 from flask import Flask, jsonify, request
 # FIXME: separate this out to a classifier class where we can switch out the models
 from pyserini import Pyserini
-from jaccard import Jaccard
 
 app = Flask(__name__)
 
@@ -37,9 +36,7 @@ def wit_ai_config():
 # FIXME: separate this out to a classifier class where we can switch out the models
 def get_answers(question, num_hits, k):
     pyserini = Pyserini(app.config.get('index'))
-    # jaccard = Jaccard()
     candidate_passages = pyserini.ranked_passages(question, num_hits, k)
-    # answers = jaccard.score(question, candidate_passages)
 
     answers = []
     for p in candidate_passages:

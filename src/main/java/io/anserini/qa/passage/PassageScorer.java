@@ -23,4 +23,6 @@ public interface PassageScorer {
   void score(String question, Map<String, Float> sentences) throws Exception;
 
   List<ScoredPassage> extractTopPassages();
+
+  double getIDF(String question, String answer) throws Exception;
 }
