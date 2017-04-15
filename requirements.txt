@@ -1,0 +1,2 @@
+-e git+https://github.com/rosequ/Castor.git@testIntegrationBranch#egg=sm-model-1.0.0
+-e git+https://github.com/rosequ/models.git@testIntegration#egg=model-1.0.0
