@@ -1,6 +1,6 @@
 import argparse
 
-from py4j.java_gateway import JavaGateway
+from py4j.java_gateway import JavaGateway, GatewayParameters
 
 class Pyserini:
     """Common base class for all methods accessing Anserini (Java)
@@ -14,7 +14,7 @@ class Pyserini:
         The entry point to the Java class PyseriniEntryPoint.
     """
 
-    def __init__(self, index_path):
+    def __init__(self, index_path, port_number):
         """
            Constructor for the Pyserini class.
 
@@ -23,7 +23,7 @@ class Pyserini:
            index_path : str
                The directory path for the Lucene index.
         """
-        self.gateway = JavaGateway()
+        self.gateway = JavaGateway(gateway_parameters=GatewayParameters(port=int(port_number)))
         self.index = self.gateway.jvm.java.lang.String(index_path)
         self.pyserini = self.gateway.jvm.io.anserini.py4j.PyseriniEntryPoint()
         self.pyserini.initializeWithIndex(index_path)

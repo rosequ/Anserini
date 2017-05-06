@@ -150,10 +150,11 @@ if __name__ == "__main__":
   parser.add_argument("-k", help="top-k passages", default=10)
   parser.add_argument("-model", help="[idf|sm]", default='idf')
   parser.add_argument('-index', help="path of the index", required=True)
+  parser.add_argument("-port", help="port number", default=25333)
 
   args = parser.parse_args()
 
-  pyserini = Pyserini(args.index)
+  pyserini = Pyserini(args.index, args.port)
   questions, answers, labels_actual = load_data(args.input)
   threshold = 0.7
   # TODO: what is this ^^ magic number

@@ -27,6 +27,7 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.search.similarities.Similarity;
 import org.apache.lucene.store.FSDirectory;
+import org.kohsuke.args4j.*;
 import py4j.GatewayServer;
 
 import java.io.IOException;
@@ -45,6 +46,12 @@ import static io.anserini.index.generator.LuceneDocumentGenerator.FIELD_ID;
  * @project anserini
  */
 public class PyseriniEntryPoint {
+
+  public static class Args {
+    // optional arguments
+    @Option(name = "-port", metaVar = "[Number]", usage = "port number")
+    public int port = 25333;
+  }
 
   private String indexDir = null;
   private IndexReader reader = null;
@@ -174,8 +181,21 @@ public class PyseriniEntryPoint {
   }
 
   public static void main(String[] argv) throws Exception {
+    Args pyseriniArgs = new Args();
+    CmdLineParser parser = new CmdLineParser(pyseriniArgs, ParserProperties.defaults().withUsageWidth(90));
+
+    try {
+      parser.parseArgument(argv);
+    } catch (CmdLineException e) {
+      System.err.println(e.getMessage());
+      parser.printUsage(System.err);
+      System.err.println("Example: RetrieveSentences" + parser.printExample(OptionHandlerFilter.REQUIRED));
+      return;
+    }
+
+
     System.out.println("starting Gateway Server...");
-    GatewayServer gatewayServer = new GatewayServer(new PyseriniEntryPoint());
+    GatewayServer gatewayServer = new GatewayServer(new PyseriniEntryPoint(), pyseriniArgs.port);
     gatewayServer.start();
     System.out.println("started!");
   }

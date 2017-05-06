@@ -26,7 +26,8 @@ mvn clean package appassembler:assemble
 ```
 
 How this works under the hood:
-- This script starts the PyseriniEntryPoint (gateway) from Java to open up a socket for communication and the Python API server.
+- This script starts the PyseriniEntryPoint (gateway) from Java to open up a socket for communication and the Python API
+ server. You can also run the gateway on a particular port by specifying `-port` option.
 - Python program tries to connect to a JVM with a gateway (localhost on port 25333).
 - The Python program, search_web_collection, in src/main/python contains a search method that takes a
 query string, number of hits and returns a list of document IDs. This calls the Java function.

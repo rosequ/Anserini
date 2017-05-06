@@ -62,8 +62,20 @@ Path of the run file to be created
 Path of the qrel file to be created
 
 
+```
+-port (oprional: port number)
+```
+Port number; should be same as an instance of JVM running on localhost (default:25333).
+
 The above command will create a run file in the `trec_eval` format and a qrel file
 called qrels.txt
+
+Sample command:
+```
+ python3 src/main/python/run_trecqa.py -index  ~/Castorini/Anserini/lucene-index.TrecQA.pos+docvectors+rawdocs \
+ -input ~/Castorini/Anserini/jacana-qa-naacl2013-data-results/dev-less-than-40.manual-edit.xml  -model idf \
+ -hits 10 -k 50 -port 25337
+```
 
 ### Calculating RBP:
 
