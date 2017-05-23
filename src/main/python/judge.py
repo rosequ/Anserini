@@ -8,13 +8,13 @@ from pyserini import Pyserini
 
 from sm_cnn.bridge import SMModelBridge
 
-pref_dict = {0:'idf', 1:'sm'}
+pref_dict = {0:'idf', 1:'sm', 3:'both'}
 class QAModel:
   instance = None
   def __init__(self, model_choice, index_path, w2v_cache, qa_model_file):
     if not QAModel.instance:
        path = os.getcwd() + '/..'
-       if model_choice == "sm":         
+       if model_choice == "sm":
          QAModel.instance = SMModelBridge(qa_model_file,
                              w2v_cache,
                              index_path)
@@ -98,14 +98,14 @@ def load_data(fname):
 def validate_input(prompt_str):
   while True:
     response = input(prompt_str).strip()
-    if response and response.strip() in "12":
+    if response and response.strip() in "123":
       return response
 
 
 def choose_method(first_list, second_list, judge_file, qid, model_choice):
     print("\nAnswer list1:")
     print("*"*100)
-            
+
     for count, cand in enumerate(first_list):
         print(count + 1, " ".join(cand[0]))
 
@@ -114,7 +114,9 @@ def choose_method(first_list, second_list, judge_file, qid, model_choice):
     for count, cand in enumerate(second_list):
         print(count + 1, " ".join(cand[0]))
 
-    preference = (int(validate_input("\nWhat ranked list do you prefer[1/2]:")) + model_choice) % 2
+    preference = int(validate_input("\nWhat ranked list do you prefer[1/2/3(both)]:"))
+    if preference < 3:
+      preference = (preference + model_choice) % 2
     judge_file.write("{}\t{}\n".format(qid, pref_dict[preference]))
         
 if __name__ == "__main__":
