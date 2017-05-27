@@ -152,6 +152,10 @@
               <mainClass>io.anserini.qa.RetrieveSentences</mainClass>
               <name>RetrieveSentences</name>
             </program>
+            <program>
+              <mainClass>io.anserini.qa.WmdBaseline</mainClass>
+              <name>WmdBaseline</name>
+            </program>
           </programs>
         </configuration>
       </plugin>
