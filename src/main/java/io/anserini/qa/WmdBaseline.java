@@ -20,7 +20,10 @@
 package io.anserini.qa;
 
 import io.anserini.embeddings.WordEmbeddingDictionary;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.StopFilter;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.queryparser.classic.ParseException;
@@ -47,7 +50,10 @@ public class WmdBaseline {
 
     // optional arguments
     @Option(name = "-analyze", usage = "passage scores")
-    public boolean analyze = true;
+    public boolean analyze = false;
+
+    @Option(name = "-split", usage = "passage scores")
+    public boolean split = false;
   }
 
   private final WordEmbeddingDictionary wmdDictionary;
@@ -78,8 +84,20 @@ public class WmdBaseline {
     return  Math.sqrt(sum);
   }
 
-  public double calcWmd(String query, String answer, boolean analyze) throws ParseException, IOException {
-    StandardAnalyzer sa = new StandardAnalyzer();
+  public double calcWmd(String query, String answer, boolean analyze, boolean split) throws ParseException, IOException {
+    Analyzer sa;
+    Analyzer sa2;
+
+    System.out.println("split is:" + split);
+
+    if (analyze) {
+      sa = new StandardAnalyzer(StopFilter.makeStopSet(stopWords));
+      sa2 = new StandardAnalyzer(StopFilter.makeStopSet(stopWords));
+    } else {
+      sa = new WhitespaceAnalyzer();
+      sa2 = new WhitespaceAnalyzer();
+    }
+
     TokenStream tokenStream = sa.tokenStream("contents", new StringReader(query));
     CharTermAttribute charTermAttribute = tokenStream.addAttribute(CharTermAttribute.class);
     tokenStream.reset();
@@ -90,16 +108,37 @@ public class WmdBaseline {
     // avoid duplicate passages
     HashSet<String> seenSentences = new HashSet<>();
     while (tokenStream.incrementToken()) {
+      String thisTerm = charTermAttribute.toString();
+      if (split) {
+        if (thisTerm.contains("-")) {
+          String[] splitTerms = thisTerm.split("-");
+
+          for (String term : splitTerms) {
+            questionTerms.add(term);
+          }
+        }
+      }
       questionTerms.add(charTermAttribute.toString());
     }
 
     double wmd = 0.0;
-    TokenStream candTokenStream = sa.tokenStream("contents", new StringReader(answer));
+    TokenStream candTokenStream = sa2.tokenStream("contents", new StringReader(answer));
     charTermAttribute = candTokenStream.addAttribute(CharTermAttribute.class);
     candTokenStream.reset();
 
     while (candTokenStream.incrementToken()) {
-      candidateTerms.add(charTermAttribute.toString());
+      String thisTerm = charTermAttribute.toString();
+
+      if (split) {
+        if (thisTerm.contains("-")) {
+          String[] splitTerms = thisTerm.split("-");
+
+          for (String term : splitTerms) {
+            candidateTerms.add(term);
+          }
+        }
+      }
+      candidateTerms.add(thisTerm);
     }
 
     for(String qTerm : questionTerms) {
@@ -118,8 +157,7 @@ public class WmdBaseline {
         wmd += minWMD;
       }
     }
-    System.out.println(query + " " + answer + " " + wmd);
-    return wmd;
+    return -1*wmd;
   }
 
   public  void writeToFile(WmdBaseline.Args args) throws IOException, ParseException {
@@ -131,6 +169,7 @@ public class WmdBaseline {
     int i = 0;
 
     String old_id = "0";
+
     while (true) {
       String question = questionFile.readLine();
       String answer = answerFile.readLine();
@@ -148,7 +187,7 @@ public class WmdBaseline {
 
       // 32.1 0 0 0 0.6212325096130371 smmodel
       // 32.1 0 1 0 0.13309887051582336 smmodel
-      outputFile.write(id + " 0 " + i + " 0 " + calcWmd(question, answer, args.analyze) + " wmdbaseline\n");
+      outputFile.write(id + " 0 " + i + " 0 " + calcWmd(question, answer, args.analyze, args.split) + " wmdbaseline\n");
       i++;
     }
     outputFile.close();
