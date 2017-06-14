@@ -48,7 +48,7 @@ public class bridge {
   }
 
   public void preloadCachedEmbeddings(String w2vCache) throws IOException {
-    List<String> lines = Files.readAllLines(Paths.get(w2vCache));
+    List<String> lines = Files.readAllLines(Paths.get(w2vCache + ".dimensions"));
     String[] sizeDimension = lines.get(0).trim().split("\\t");
     this.vocabSize = Integer.parseInt(sizeDimension[0]);
     this.vectorDimension = Integer.parseInt(sizeDimension[1]);
