@@ -108,7 +108,7 @@ def load_data(fname):
       if label:
         label = label.group(1)
         label = 1 if label == 'positive' else 0
-        answer = line.split('\t')
+        answer = line.lower().split('\t')
         answer_count += 1
 
         answer_id = 'Q{}-A{}'.format(qid, answer_count)
@@ -160,8 +160,8 @@ if __name__ == "__main__":
   parser.add_argument('-input', help='path of a TrecQA file', required=True)
   parser.add_argument("-output", help="path of output file")
   parser.add_argument("-qrel", help="path of qrel file")
-  parser.add_argument("-hits", help="number of hits", default=20)
-  parser.add_argument("-k", help="top-k passages", default=10)
+  parser.add_argument("-hits", help="number of hits", default=1000)
+  parser.add_argument("-k", help="top-k passages", default=20)
   parser.add_argument("-model", help="[idf|sm]", default='idf')
   parser.add_argument('-index', help="path of the index", required=True)
   parser.add_argument('-w2v-cache', help="word embeddings cache file", required=True)
@@ -192,6 +192,8 @@ if __name__ == "__main__":
   seen_docs = []
   with open(output_file, 'w') as out:
     for qid, question in zip(answers.keys(), questions):
+      # if qid != "32.1":
+      #   exit()
       candidates = get_answers(pyserini, question, int(args.hits), int(args.k), args.model, args.index, args.w2v_cache, args.qa_model_file)
       scored_candidates = score_candidates(candidates, answers[qid])
 
