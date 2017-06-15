@@ -22,13 +22,13 @@ def answer():
         question = req["question"]
         num_hits = req.get('num_hits', 30)
         k = req.get('k', 20)
-        print("Question: {}".format(question))
+        # print("Question: {}".format(question))
         # FIXME: get the answer from the PyTorch model here
         answers = get_answers(question, num_hits, k)
         answer_dict = {"answers": answers}
         return jsonify(answer_dict)
     except Exception as e:
-        print(e)
+        # print(e)
         error_dict = {"error": "ERROR - could not parse the question or get answer. "}
         return jsonify(error_dict)
 
@@ -55,13 +55,17 @@ def get_answers(question, num_hits, k):
                               path_to_castorini + '/data/word2vec/aquaint+wiki.txt.gz.ndim=50.cache',
                               app.config['Flask']['index'])
         idf_json = pyserini.get_term_idf_json()
-        answers_list = model.rerank_candidate_answers(question, candidate_passages_sm, idf_json)
+        flags = {
+            "punctuation": "keep",  # ignoring for now  you can {keep|remove} punctuation
+            "dash_words": "split"  # ignoring for now. you can {keep|split} words-with-hyphens
+        }
+        answers_list = model.rerank_candidate_answers(question, candidate_passages_sm, idf_json, flags)
         sorted_answers = sorted(answers_list, key=lambda x: x[0], reverse=True)
     else:
         # the re-ranking model chosen is idf
         sorted_answers = list(candidate_sent_scores)
 
-    print("in idf:{}".format(sorted_answers))
+    # print("in idf:{}".format(sorted_answers))
     answers = []
     for score, sent in sorted_answers:
         answers.append({'passage': sent, 'score': score})
@@ -72,7 +76,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Start the Flask API at the specified host, port')
     parser.add_argument('--config', help='config to use', required=False, type=str, default='config.cfg')
     parser.add_argument("--debug", help="print debug info", action="store_true")
-    parser.add_argument("--model", help="[idf|sm]", default="idf")
+    parser.add_argument("--model", help="[idf|sm]", default="sm")
     args = parser.parse_args()
 
     if not os.path.isfile(args.config):
