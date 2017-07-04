@@ -20,13 +20,22 @@
 package io.anserini.qa;
 
 import io.anserini.embeddings.WordEmbeddingDictionary;
+import io.anserini.index.generator.LuceneDocumentGenerator;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.StopFilter;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.similarities.ClassicSimilarity;
+import org.apache.lucene.store.FSDirectory;
 import org.kohsuke.args4j.*;
 
 import java.io.*;
@@ -54,14 +63,25 @@ public class WmdBaseline {
 
     @Option(name = "-split", usage = "passage scores")
     public boolean split = false;
+
+    @Option(name = "-idfIndex", metaVar = "[path]", required = true, usage = "Lucene index")
+    public String idfIndex = "";
+
   }
 
   private final WordEmbeddingDictionary wmdDictionary;
+  private FSDirectory directory = null;
+  private DirectoryReader reader = null;
   private final List<String> stopWords;
 
   public static final String FIELD_BODY = "contents";
 
   public WmdBaseline(WmdBaseline.Args args) throws Exception {
+    if (!args.idfIndex.isEmpty()) {
+      this.directory = FSDirectory.open(new File(args.idfIndex).toPath());
+      this.reader = DirectoryReader.open(directory);
+    }
+
     this.wmdDictionary = new WordEmbeddingDictionary(args.index);
     stopWords = new ArrayList<>();
 
@@ -87,8 +107,6 @@ public class WmdBaseline {
   public double calcWmd(String query, String answer, boolean analyze, boolean split) throws ParseException, IOException {
     Analyzer sa;
     Analyzer sa2;
-
-    System.out.println("split is:" + split);
 
     if (analyze) {
       sa = new StandardAnalyzer(StopFilter.makeStopSet(stopWords));
@@ -141,8 +159,14 @@ public class WmdBaseline {
       candidateTerms.add(thisTerm);
     }
 
+    // IDF similarity for question terms
+    EnglishAnalyzer ea = new EnglishAnalyzer(CharArraySet.EMPTY_SET);
+    QueryParser qp = new QueryParser(LuceneDocumentGenerator.FIELD_BODY, ea);
+    ClassicSimilarity similarity = new ClassicSimilarity();
+
     for(String qTerm : questionTerms) {
       double minWMD = Double.MAX_VALUE;
+      double qTermIdf = 0.0;
       for (String candTerm : candidateTerms) {
         try {
           double thisWMD = distance(wmdDictionary.getEmbeddingVector(qTerm), wmdDictionary.getEmbeddingVector(candTerm));
@@ -153,8 +177,17 @@ public class WmdBaseline {
           // term is OOV
         }
       }
+
+      try {
+        TermQuery q = (TermQuery) qp.parse(qTerm);
+        Term t = q.getTerm();
+
+        qTermIdf = similarity.idf(reader.docFreq(t), reader.numDocs());
+      } catch (Exception e) {
+        continue;
+      }
       if (minWMD != Double.MAX_VALUE) {
-        wmd += minWMD;
+        wmd += (minWMD *  qTermIdf);
       }
     }
     return -1*wmd;
