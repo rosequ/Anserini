@@ -64,7 +64,7 @@ public class WmdBaseline {
     @Option(name = "-split", usage = "passage scores")
     public boolean split = false;
 
-    @Option(name = "-idfIndex", metaVar = "[path]", required = true, usage = "Lucene index")
+    @Option(name = "-idfIndex", metaVar = "[path]", usage = "Lucene index")
     public String idfIndex = "";
 
   }
@@ -125,6 +125,7 @@ public class WmdBaseline {
 
     // avoid duplicate passages
     HashSet<String> seenSentences = new HashSet<>();
+
     while (tokenStream.incrementToken()) {
       String thisTerm = charTermAttribute.toString();
       if (split) {
@@ -153,6 +154,7 @@ public class WmdBaseline {
 
           for (String term : splitTerms) {
             candidateTerms.add(term);
+//            System.out.println(term);
           }
         }
       }
@@ -166,11 +168,12 @@ public class WmdBaseline {
 
     for(String qTerm : questionTerms) {
       double minWMD = Double.MAX_VALUE;
-      double qTermIdf = 0.0;
+      double qTermIdf = 1.0;
       for (String candTerm : candidateTerms) {
         try {
           double thisWMD = distance(wmdDictionary.getEmbeddingVector(qTerm), wmdDictionary.getEmbeddingVector(candTerm));
           if (minWMD > thisWMD) {
+//            System.out.println(qTerm + " " + candTerm + ": " + thisWMD);
             minWMD = thisWMD;
           }
         } catch (ArrayIndexOutOfBoundsException e) {
@@ -184,10 +187,11 @@ public class WmdBaseline {
 
         qTermIdf = similarity.idf(reader.docFreq(t), reader.numDocs());
       } catch (Exception e) {
-        continue;
+        System.out.println(e);
       }
       if (minWMD != Double.MAX_VALUE) {
         wmd += (minWMD *  qTermIdf);
+//        wmd += minWMD;
       }
     }
     return -1*wmd;
@@ -202,7 +206,7 @@ public class WmdBaseline {
     int i = 0;
 
     String old_id = "0";
-
+    int count = 0;
     while (true) {
       String question = questionFile.readLine();
       String answer = answerFile.readLine();
@@ -220,8 +224,11 @@ public class WmdBaseline {
 
       // 32.1 0 0 0 0.6212325096130371 smmodel
       // 32.1 0 1 0 0.13309887051582336 smmodel
-      outputFile.write(id + " 0 " + i + " 0 " + calcWmd(question, answer, args.analyze, args.split) + " wmdbaseline\n");
-      i++;
+//      if (id.equals("35.2") && count <= 2) {
+        outputFile.write(id + " 0 " + i + " 0 " + calcWmd(question, answer, args.analyze, args.split) + " wmdbaseline\n");
+        i++;
+//        count++;
+//      }
     }
     outputFile.close();
 
