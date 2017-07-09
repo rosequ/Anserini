@@ -19,6 +19,7 @@
 
 package io.anserini.qa;
 
+import io.anserini.embeddings.TermNotFoundException;
 import io.anserini.embeddings.WordEmbeddingDictionary;
 import io.anserini.index.generator.LuceneDocumentGenerator;
 import org.apache.lucene.analysis.Analyzer;
@@ -37,6 +38,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.similarities.ClassicSimilarity;
 import org.apache.lucene.store.FSDirectory;
+import org.bytedeco.javacpp.presets.opencv_core;
 import org.kohsuke.args4j.*;
 
 import java.io.*;
@@ -118,108 +120,93 @@ public class WmdBaseline {
       Term t = q.getTerm();
       termIDF = similarity.idf(reader.docFreq(t), reader.numDocs());
 
-      System.out.println(term + '\t' + esTerm + '\t' + q + '\t' + t + '\t' + termIDF);
+    //System.out.println(term + '\t' + esTerm + '\t' + q + '\t' + t + '\t' + termIDF);
     } catch (Exception e) {
-        System.err.println("Exception in fetching IDF(" + term + "): " + e.toString());
-      }
+      System.err.println("Exception in fetching IDF(" + term + "): " + e.toString());
+      return 0;
+    }
     return termIDF;
   }
 
   public double calcWmd(String query, String answer, boolean analyze, boolean split) throws ParseException, IOException {
-    HashSet<String> questionTerms =
+    query = query.replace("-", " ");
+    answer = answer.replace("-", " ");
+    Analyzer sa;
+    Analyzer sa2;
 
-//    Analyzer sa;
-//    Analyzer sa2;
-//
-//    if (analyze) {
-//      sa = new StandardAnalyzer(StopFilter.makeStopSet(stopWords));
-//      sa2 = new StandardAnalyzer(StopFilter.makeStopSet(stopWords));
-//    } else {
-//      sa = new WhitespaceAnalyzer();
-//      sa2 = new WhitespaceAnalyzer();
-//    }
-//
-//    TokenStream tokenStream = sa.tokenStream("contents", new StringReader(query));
-//    CharTermAttribute charTermAttribute = tokenStream.addAttribute(CharTermAttribute.class);
-//    tokenStream.reset();
-//
-//    HashSet<String> questionTerms = new HashSet<>();
-//    HashSet<String> candidateTerms = new HashSet<>();
-//
-//    // avoid duplicate passages
-//    HashSet<String> seenSentences = new HashSet<>();
-//
-//    while (tokenStream.incrementToken()) {
-//      String thisTerm = charTermAttribute.toString();
-//      if (split) {
-//        if (thisTerm.contains("-")) {
-//          String[] splitTerms = thisTerm.split("-");
-//
-//          for (String term : splitTerms) {
-//            questionTerms.add(term);
-//          }
-//        }
-//      }
-//      questionTerms.add(charTermAttribute.toString());
-//    }
-//
-//    double wmd = 0.0;
-//    TokenStream candTokenStream = sa2.tokenStream("contents", new StringReader(answer));
-//    charTermAttribute = candTokenStream.addAttribute(CharTermAttribute.class);
-//    candTokenStream.reset();
-//
-//    while (candTokenStream.incrementToken()) {
-//      String thisTerm = charTermAttribute.toString();
-//
-//      if (split) {
-//        if (thisTerm.contains("-")) {
-//          String[] splitTerms = thisTerm.split("-");
-//
-//          for (String term : splitTerms) {
-//            candidateTerms.add(term);
-////            System.out.println(term);
-//          }
-//        }
-//      }
-//      candidateTerms.add(thisTerm);
-//    }
+    if (analyze) {
+      sa = new StandardAnalyzer(StopFilter.makeStopSet(stopWords));
+      sa2 = new StandardAnalyzer(StopFilter.makeStopSet(stopWords));
+    } else {
+      sa = new WhitespaceAnalyzer();
+      sa2 = new WhitespaceAnalyzer();
+    }
 
-    // IDF similarity for question terms
-//    EnglishAnalyzer ea = new EnglishAnalyzer(StopFilter.makeStopSet(stopWords));
-//    QueryParser qp = new QueryParser(LuceneDocumentGenerator.FIELD_BODY, ea);
-//    ClassicSimilarity similarity = new ClassicSimilarity();
-//    double totalIDF = 0.0;
-//
-//    for(String qTerm : questionTerms) {
-//      double minWMD = Double.MAX_VALUE;
-//      double qTermIdf = 0.0;
-//      for (String candTerm : candidateTerms) {
-//        try {
-//          double thisWMD = distance(wmdDictionary.getEmbeddingVector(qTerm), wmdDictionary.getEmbeddingVector(candTerm));
-//          if (minWMD > thisWMD) {
-////            System.out.println(qTerm + " " + candTerm + ": " + thisWMD);
-//            minWMD = thisWMD;
-//          }
-//        } catch (ArrayIndexOutOfBoundsException e) {
-//          // term is OOV
-//        }
-//      }
-//
-//      try {
-//        TermQuery q = (TermQuery) qp.parse(qTerm);
-//        Term t = q.getTerm();
-//
-//        qTermIdf = similarity.idf(reader.docFreq(t), reader.numDocs());
-//        totalIDF += qTermIdf;
-//      } catch (Exception e) {
-//        System.out.println(e);
-//      }
-//      if (minWMD != Double.MAX_VALUE && minWMD == 0) {
-//        wmd += ( qTermIdf);
-////        wmd += minWMD;
-//      }
-//    }
-//    return wmd;
+    TokenStream tokenStream = sa.tokenStream("contents", new StringReader(query));
+    CharTermAttribute charTermAttribute = tokenStream.addAttribute(CharTermAttribute.class);
+    tokenStream.reset();
+
+    HashSet<String> questionTerms = new HashSet<>();
+    HashSet<String> candidateTerms = new HashSet<>();
+
+    while (tokenStream.incrementToken()) {
+      String thisTerm = charTermAttribute.toString();
+      questionTerms.add(thisTerm);
+    }
+
+    double wmd = 0.0;
+    double totalIDF = 0.0;
+    TokenStream candTokenStream = sa2.tokenStream("contents", new StringReader(answer));
+    charTermAttribute = candTokenStream.addAttribute(CharTermAttribute.class);
+    candTokenStream.reset();
+
+    while (candTokenStream.incrementToken()) {
+      String thisTerm = charTermAttribute.toString();
+      candidateTerms.add(thisTerm);
+    }
+
+    for(String qTerm : questionTerms) {
+      double minWMD = Double.MAX_VALUE;
+      double idf = 1.0;
+      for (String candTerm : candidateTerms) {
+        try {
+          double thisWMD = distance(wmdDictionary.getEmbeddingVector(qTerm), wmdDictionary.getEmbeddingVector(candTerm));
+          if (minWMD > thisWMD) {
+            minWMD = thisWMD;
+//            System.out.println(qTerm + " " + candTerm + " " + minWMD);
+          }
+        } catch (TermNotFoundException e) {
+          double thisWMD = 0.0;
+          String missingTerm = e.getMessage();
+          if (qTerm.equals(missingTerm)) {
+            if (qTerm.equals(candTerm)) {
+              thisWMD = 0.0;
+              minWMD = thisWMD;
+            } else {
+              try {
+                thisWMD = distance(wmdDictionary.getEmbeddingVector("unk"), wmdDictionary.getEmbeddingVector(candTerm));
+                if (minWMD > thisWMD) {
+                  minWMD = thisWMD;
+//                  System.out.println(qTerm + " " + candTerm + " " + minWMD);
+                }
+              } catch (TermNotFoundException e1) {
+
+              }
+            }
+          } else {
+            continue;
+          }
+        } catch (IOException e) {
+        }
+      }
+
+      if (minWMD != Double.MAX_VALUE) {
+        idf = getTermIDF(qTerm);
+        wmd += (minWMD * idf);
+        totalIDF += idf;
+      }
+    }
+    return -wmd / totalIDF;
   }
 
   public  void writeToFile(WmdBaseline.Args args) throws IOException, ParseException {
@@ -249,7 +236,7 @@ public class WmdBaseline {
 
       // 32.1 0 0 0 0.6212325096130371 smmodel
       // 32.1 0 1 0 0.13309887051582336 smmodel
-//      if (id.equals("35.2") && count <= 2) {
+//      if (id.equals("58.1") && count < 5) {
         outputFile.write(id + " 0 " + i + " 0 " + calcWmd(question, answer, args.analyze, args.split) + " wmdbaseline\n");
         i++;
 //        count++;
@@ -276,3 +263,4 @@ public class WmdBaseline {
     g.writeToFile(qaArgs);
   }
 }
+
