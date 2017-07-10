@@ -173,7 +173,6 @@ public class WmdBaseline {
           double thisWMD = distance(wmdDictionary.getEmbeddingVector(qTerm), wmdDictionary.getEmbeddingVector(candTerm));
           if (minWMD > thisWMD) {
             minWMD = thisWMD;
-//            System.out.println(qTerm + " " + candTerm + " " + minWMD);
           }
         } catch (TermNotFoundException e) {
           double thisWMD = 0.0;
@@ -187,7 +186,6 @@ public class WmdBaseline {
                 thisWMD = distance(wmdDictionary.getEmbeddingVector("unk"), wmdDictionary.getEmbeddingVector(candTerm));
                 if (minWMD > thisWMD) {
                   minWMD = thisWMD;
-//                  System.out.println(qTerm + " " + candTerm + " " + minWMD);
                 }
               } catch (TermNotFoundException e1) {
 
@@ -201,12 +199,13 @@ public class WmdBaseline {
       }
 
       if (minWMD != Double.MAX_VALUE) {
-        idf = getTermIDF(qTerm);
-        wmd += (minWMD * idf);
-        totalIDF += idf;
+//        idf = getTermIDF(qTerm);
+//        wmd += (minWMD * idf);
+//        totalIDF += idf;
+        wmd += minWMD;
       }
     }
-    return -wmd / totalIDF;
+    return -wmd;
   }
 
   public  void writeToFile(WmdBaseline.Args args) throws IOException, ParseException {
@@ -236,11 +235,8 @@ public class WmdBaseline {
 
       // 32.1 0 0 0 0.6212325096130371 smmodel
       // 32.1 0 1 0 0.13309887051582336 smmodel
-//      if (id.equals("58.1") && count < 5) {
         outputFile.write(id + " 0 " + i + " 0 " + calcWmd(question, answer, args.analyze, args.split) + " wmdbaseline\n");
         i++;
-//        count++;
-//      }
     }
     outputFile.close();
 
