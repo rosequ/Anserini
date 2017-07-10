@@ -124,7 +124,7 @@ public class RetrieveSentences {
 
   public void getRankedPassages(Args args) throws Exception {
     Map<String, Float> scoredDocs  = retrieveDocuments(args);
-    Map<String, Float> sentencesMap = new LinkedHashMap<>();
+    List<ScoredPassage> scoredSentences = new ArrayList<>();
 
     IndexUtils util = new IndexUtils(args.index);
 
@@ -136,17 +136,16 @@ public class RetrieveSentences {
 
         for (Sentence sent : sentences) {
           List<CoreLabel> tokens = tokenizerFactory.getTokenizer(new StringReader(sent.text())).tokenize();
-          String answerTokens = tokens.stream()
-                  .map(CoreLabel::toString)
-                  .collect(Collectors.joining(" "));
-          sentencesMap.put(answerTokens, doc.getValue());
+          String answerTokens = tokens.stream().map(CoreLabel::toString).collect(Collectors.joining(" "));
+
+          scoredSentences.add(new ScoredPassage(answerTokens, doc.getKey(), doc.getValue(), 0.0));
         }
     }
 
     String queryTokens = tokenizerFactory.getTokenizer(new StringReader(args.query)).tokenize().stream()
             .map(CoreLabel::toString)
             .collect(Collectors.joining(" "));
-    scorer.score(queryTokens, sentencesMap);
+    scorer.score(queryTokens, scoredSentences);
 
     List<ScoredPassage> topPassages = scorer.extractTopPassages();
     for (ScoredPassage s: topPassages) {

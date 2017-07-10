@@ -35,13 +35,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.BufferedReader;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Arrays;
+import java.util.*;
 
 public class IdfPassageScorer implements PassageScorer {
 
@@ -75,15 +69,15 @@ public class IdfPassageScorer implements PassageScorer {
   }
 
   @Override
-  public void score(String query, Map<String, Float> sentences) throws Exception {
+  public void score(String query, List<ScoredPassage> sentences) throws Exception {
     EnglishAnalyzer ea = new EnglishAnalyzer(StopFilter.makeStopSet(stopWords));
     QueryParser qp = new QueryParser(LuceneDocumentGenerator.FIELD_BODY, ea);
     ClassicSimilarity similarity = new ClassicSimilarity();
 
     String escapedQuery = qp.escape(query);
     Query question = qp.parse(escapedQuery);
-    HashSet<String> questionTerms = new HashSet<>(Arrays.asList(question.toString()
-            .trim().toLowerCase().split("\\s+")));
+    Set<String> questionTerms = new HashSet<>(Arrays.asList(question.toString().trim().toLowerCase().
+            split("\\s+")));
 
 
     EnglishAnalyzer ea2 = new EnglishAnalyzer(CharArraySet.EMPTY_SET);
@@ -108,11 +102,11 @@ public class IdfPassageScorer implements PassageScorer {
     // avoid duplicate passages
     HashSet<String> seenSentences = new HashSet<>();
 
-    for (Map.Entry<String, Float> sent : sentences.entrySet()) {
+    for (ScoredPassage s : sentences) {
       double idf = 0.0;
       HashSet<String> seenTerms = new HashSet<>();
 
-      String[] terms = sent.getKey().toLowerCase().split("\\s+");
+      String[] terms = s.getSentence().toLowerCase().split("\\s+");
       for (String term: terms) {
         try {
           TermQuery q = (TermQuery) qp.parse(term);
@@ -136,15 +130,15 @@ public class IdfPassageScorer implements PassageScorer {
         }
       }
 
-      double weightedScore = idf + 0.0001 * sent.getValue();
-      ScoredPassage scoredPassage = new ScoredPassage(sent.getKey(), weightedScore, sent.getValue());
+      double weightedScore = idf + 0.0001 * s.getDocScore();
+      ScoredPassage scoredPassage = new ScoredPassage(s.getSentence(), s.getDocId(), s.getDocScore(), weightedScore);
       if ((scoredPassageHeap.size() < topPassages || weightedScore > scoredPassageHeap.peekLast().getScore()) &&
-              !seenSentences.contains(sent)) {
+              !seenSentences.contains(s.getSentence())) {
         if (scoredPassageHeap.size() == topPassages) {
             scoredPassageHeap.pollLast();
         }
         scoredPassageHeap.add(scoredPassage);
-        seenSentences.add(sent.getKey());
+        seenSentences.add(s.getSentence());
       }
     }
   }

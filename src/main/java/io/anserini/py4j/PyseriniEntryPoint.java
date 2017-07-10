@@ -154,7 +154,7 @@ public class PyseriniEntryPoint {
 
   public List<String> getRankedPassages(String query, int numHits, int k) throws Exception {
     Map<String, Float> docScore = search(query, numHits);
-    Map<String, Float> sentencesMap = new LinkedHashMap<>();
+    List<ScoredPassage> sentenceScores = new ArrayList<>();
     TokenizerFactory<CoreLabel> tokenizerFactory = PTBTokenizer.factory(new CoreLabelTokenFactory(), "");
 
     for (Map.Entry<String, Float> doc : docScore.entrySet()) {
@@ -165,7 +165,7 @@ public class PyseriniEntryPoint {
         String answerTokens = tokens.stream()
                 .map(CoreLabel::toString)
                 .collect(Collectors.joining(" "));
-        sentencesMap.put(answerTokens, doc.getValue());
+        sentenceScores.add(new ScoredPassage(answerTokens, doc.getKey(), doc.getValue(), 0.0));
       }
     }
 
@@ -173,13 +173,13 @@ public class PyseriniEntryPoint {
     String queryTokens = tokenizerFactory.getTokenizer(new StringReader(query)).tokenize().stream()
             .map(CoreLabel::toString)
             .collect(Collectors.joining(" "));
-    passageScorer.score(query, sentencesMap);
+    passageScorer.score(query, sentenceScores);
 
     List<String> topSentences = new ArrayList<>();
     List<ScoredPassage> topPassages = passageScorer.extractTopPassages();
 
     for (ScoredPassage s : topPassages) {
-      topSentences.add(s.getSentence() + "\t" + s.getScore());
+      topSentences.add(s.getSentence() + "\t" + s.getDocId() + "\t" + s.getScore());
     }
 
     return topSentences;

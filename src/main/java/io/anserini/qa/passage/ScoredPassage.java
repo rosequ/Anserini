@@ -18,11 +18,13 @@ package io.anserini.qa.passage;
 
 public class ScoredPassage implements Comparable<ScoredPassage> {
   String sentence;
+  String docid;
   double score;
-  float docScore;
+  double docScore;
 
-  public ScoredPassage(String sentence, double score, float docScore) {
+  public ScoredPassage(String sentence, String docid, double docScore, double score) {
     this.sentence = sentence;
+    this.docid = docid;
     this.score = score;
     this.docScore = docScore;
   }
@@ -33,6 +35,10 @@ public class ScoredPassage implements Comparable<ScoredPassage> {
 
   public double getScore() {
     return score;
+  }
+
+  public String getDocId() {
+    return  docid;
   }
 
   public double getDocScore() {

@@ -22,7 +22,7 @@ import java.util.Map;
 
 public interface PassageScorer {
 
-  void score(String question, Map<String, Float> sentences) throws Exception;
+  void score(String question, List<ScoredPassage> sentences) throws Exception;
 
   List<ScoredPassage> extractTopPassages();
 
