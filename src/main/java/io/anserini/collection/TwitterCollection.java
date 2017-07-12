@@ -17,6 +17,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
 
+/**
+ * Class representing an instance of a TREC Microblog collection.
+ */
 public class TwitterCollection extends Collection<TwitterDocument> {
   public class FileSegment extends Collection.FileSegment {
     private String fileName;

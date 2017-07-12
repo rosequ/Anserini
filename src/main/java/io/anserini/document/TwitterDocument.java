@@ -10,7 +10,9 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
-
+/**
+ * A Twitter document (status).
+ */
 public class TwitterDocument implements SourceDocument {
   private static final Logger LOG = LogManager.getLogger(io.anserini.document.twitter.Status.class);
 
@@ -135,7 +137,6 @@ public class TwitterDocument implements SourceDocument {
     }
 
     if (obj.get("text") == null) {
-      System.out.println("Text is null");
       return null;
     }
 

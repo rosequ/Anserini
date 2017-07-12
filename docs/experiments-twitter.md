@@ -6,7 +6,7 @@ Indexing:
 nohup sh target/appassembler/bin/IndexCollection -collection TwitterCollection \
  -input /path/to/tweet/collection/ -generator LuceneDocumentGenerator \
  -index lucene-index.twitter.pos+docvectors -threads 16 -storePositions -storeDocvectors -optimize \
- > log.core.pos+docvectors &
+ > log.twitter.pos+docvectors &
 
 ```
 
@@ -20,7 +20,7 @@ After indexing is done, you should be able to perform a retrieval as follows:
 
 ```
 sh target/appassembler/bin/SearchTweets \
-  -topicreader Trec -index lucene-index.core.pos+docvectors -bm25 \
+  -topicreader Trec -index lucene-index.twitter.pos+docvectors -bm25 \
   -topics src/main/resources/topics-and-qrels/topics.microblog2011.txt -output run.microblog2011.bm25.txt
 ```
 
