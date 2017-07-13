@@ -113,6 +113,7 @@ def eval_by_pattern(qid, candidate, pattern):
     this_candidate = " ".join(candidate[0])
     docid, score = candidate[1], candidate[2]
 
+    print(qid, docid, this_candidate)
     result = re.findall(r'{}'.format(pattern.lower()), this_candidate)
     if result and docid in docs:
         print(qid, docid)
