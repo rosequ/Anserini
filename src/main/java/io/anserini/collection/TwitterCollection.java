@@ -2,11 +2,7 @@ package io.anserini.collection;
 
 import io.anserini.document.TwitterDocument;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.FileReader;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,11 +28,12 @@ public class TwitterCollection extends Collection<TwitterDocument> {
       this.path = path;
       this.bufferedReader = null;
       String fileName = path.toString();
-      if (fileName.endsWith(".gz")) { //.gz
+      if (fileName.endsWith(".gz")) {
         InputStream stream = new GZIPInputStream(
                 Files.newInputStream(path, StandardOpenOption.READ), BUFFER_SIZE);
         bufferedReader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
-      } else { // in case user had already uncompressed the folder
+      } else {
+        // in case user had already uncompressed the folder
         bufferedReader = new BufferedReader(new FileReader(fileName));
       }
     }
@@ -57,17 +54,35 @@ public class TwitterCollection extends Collection<TwitterDocument> {
 
     @Override
     public TwitterDocument next() {
-      TwitterDocument doc = new TwitterDocument();
-      try {
-        doc = (TwitterDocument) doc.readNextRecord(bufferedReader);
-        if (doc == null) {
-          atEOF = true;
-          doc = null;
+
+      TwitterDocument doc = null;
+      String raw = null;
+
+      while (doc == null) {
+        try {
+          raw = bufferedReader.readLine();
+        } catch (IOException e) {
+          e.printStackTrace();
         }
-      } catch (IOException e) {
-        doc = null;
+
+        // Check to see if we've reached end of file.
+        if (raw == null) {
+          atEOF = true;
+        }
+
+        try {
+          doc = (TwitterDocument) doc.readNextRecord(raw);
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
       }
-      return doc;
+      
+      try {
+        return (TwitterDocument) doc.readNextRecord(raw);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      return  null;
     }
   }
 
