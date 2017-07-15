@@ -55,34 +55,31 @@ public class TwitterCollection extends Collection<TwitterDocument> {
     @Override
     public TwitterDocument next() {
 
-      TwitterDocument doc = null;
+      TwitterDocument doc = new TwitterDocument();
       String raw = null;
 
-      while (doc == null) {
-        try {
-          raw = bufferedReader.readLine();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-
-        // Check to see if we've reached end of file.
-        if (raw == null) {
-          atEOF = true;
-        }
-
-        try {
-          doc = (TwitterDocument) doc.readNextRecord(raw);
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-      }
-      
       try {
-        return (TwitterDocument) doc.readNextRecord(raw);
+        raw = bufferedReader.readLine();
       } catch (IOException e) {
         e.printStackTrace();
       }
-      return  null;
+
+      // Check to see if we've reached end of file.
+      if (raw == null) {
+        atEOF = true;
+        return null;
+      }
+
+      try {
+        doc = (TwitterDocument) doc.readNextRecord(raw);
+
+        if (doc == null) {
+          return null;
+        }
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      return  doc;
     }
   }
 

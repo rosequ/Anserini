@@ -14,7 +14,7 @@ public class TwitterDocument implements SourceDocument {
   private static final Logger LOG = LogManager.getLogger(io.anserini.document.twitter.Status.class);
 
   private String id;
-  private String content;
+  private String contents;
 
   private static final JsonParser JSON_PARSER = new JsonParser();
 
@@ -30,12 +30,13 @@ public class TwitterDocument implements SourceDocument {
     }
 
     if (obj.get("text") == null) {
-      content = null;
+      contents = null;
       return null;
     }
 
-    content = obj.get("text").getAsString();
+    contents = obj.get("text").getAsString();
     id = obj.get("id").getAsString();
+    System.out.println(id);
     return this;
   }
 
@@ -46,7 +47,7 @@ public class TwitterDocument implements SourceDocument {
 
   @Override
   public String content() {
-    return content;
+    return contents;
   }
 
   @Override
