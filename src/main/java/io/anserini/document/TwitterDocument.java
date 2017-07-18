@@ -30,13 +30,19 @@ public class TwitterDocument implements SourceDocument {
     }
 
     if (obj.get("text") == null) {
-      contents = null;
       return null;
+    }
+
+    // Do not index retweets
+    try {
+      long retweetStatusID = obj.getAsJsonObject("retweeted_status").get("id").getAsLong();
+      return null;
+    } catch (Exception e) {
+      // Do nothing if the retweet doesn't exist
     }
 
     contents = obj.get("text").getAsString();
     id = obj.get("id").getAsString();
-    System.out.println(id);
     return this;
   }
 

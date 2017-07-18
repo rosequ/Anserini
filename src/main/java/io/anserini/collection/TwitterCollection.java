@@ -18,13 +18,10 @@ import java.util.zip.GZIPInputStream;
  */
 public class TwitterCollection extends Collection<TwitterDocument> {
   public class FileSegment extends Collection.FileSegment {
-    private String fileName;
     protected BufferedReader bufferedReader;
     protected final int BUFFER_SIZE = 1 << 16; // 64K
 
     protected FileSegment(Path path) throws IOException {
-      this.path = path;
-      this.fileName = path.toString();
       this.path = path;
       this.bufferedReader = null;
       String fileName = path.toString();
@@ -64,7 +61,7 @@ public class TwitterCollection extends Collection<TwitterDocument> {
         e.printStackTrace();
       }
 
-      // Check to see if we've reached end of file.
+      // check to see if we've reached end of file.
       if (raw == null) {
         atEOF = true;
         return null;
