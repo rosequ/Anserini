@@ -39,6 +39,7 @@ def get_answers(pyserini, question, h0, h1, model_choice, index_path, w2v_cache=
 
         for candidate, docid, score in sorted_answers:
             tokens = TreebankWordTokenizer().tokenize(candidate.lower().split("\t")[0])
+            docid = "".join(docid.lower().split())
             tokeninzed_answer.append((tokens, docid, score))
         return tokeninzed_answer
 
@@ -46,6 +47,8 @@ def get_answers(pyserini, question, h0, h1, model_choice, index_path, w2v_cache=
         for candidate in candidate_passages_scores:
             candidate_sent, docid, score = candidate.lower().split("\t")
             tokens = TreebankWordTokenizer().tokenize(candidate_sent.lower())
+            docid = "".join(docid.split())
+            # print(docid)
             tokeninzed_answer.append((tokens, docid, score))
         return tokeninzed_answer
 
@@ -113,14 +116,11 @@ def eval_by_pattern(qid, candidate, pattern):
     this_candidate = " ".join(candidate[0])
     docid, score = candidate[1], candidate[2]
 
-    print(qid, docid, this_candidate)
+    # print(qid, docid, this_candidate)
     result = re.findall(r'{}'.format(pattern.lower()), this_candidate)
     if result and docid in docs:
         print(qid, docid)
         correct += 1
-        total_correct += 1
-    else:
-        # print(qid, docid, this_candidate)
         total_correct += 1
 
 
@@ -171,5 +171,5 @@ if __name__ == "__main__":
         except KeyError as e:
             print("Pattern not found for question: {}".format(e))
 
-    print("Accuracy:{}".format(str(correct/total_correct)))
+    print("Accuracy:{}".format(str(correct/62)))
 
