@@ -53,23 +53,23 @@ def jaccard(set1, set2):
 
 def score_candidates(candidates, answers):
     scored_candidates = {}
-    Candidate = namedtuple('Candidate', 'retrieved_set retrieved_str retrieved_score in_dataset')
+    Candidate = namedtuple('Candidate', 'retrieved_set retrieved_str retrieved_score')
 
     for candidate in candidates:
         this_candidate = Candidate(retrieved_set=set(candidate[0]), retrieved_str=" ".join(candidate[0]),
-                                   retrieved_score=candidate[1], in_dataset=set(answer[1]))
+                                   retrieved_score=candidate[1])
 
         # xml file doesn't contain answers
         if not answers:
-            scored_candidates[this_candidate] = ("empty answer", 0.0, this_candidate.retrieved_score)
+            scored_candidates[this_candidate.retrieved_str] = ("empty answer", 0.0, this_candidate.retrieved_score)
 
         for answer in answers:
-            similarity = jaccard(this_candidate.retrieved_set, this_candidate.in_dataset)
+            similarity = jaccard(this_candidate.retrieved_set, set(answer[1]))
 
-            if this_candidate not in scored_candidates:
-                scored_candidates[this_candidate] = (answer, similarity, this_candidate.retrieved_score)
-            elif similarity > scored_candidates[this_candidate][1]:
-                scored_candidates[this_candidate] = (answer, similarity, this_candidate.retrieved_score)
+            if this_candidate.retrieved_str not in scored_candidates:
+                scored_candidates[this_candidate.retrieved_str] = (answer, similarity, this_candidate.retrieved_score)
+            elif similarity > scored_candidates[this_candidate.retrieved_str][1]:
+                scored_candidates[this_candidate.retrieved_str] = (answer, similarity, this_candidate.retrieved_score)
 
     return scored_candidates
 
@@ -103,7 +103,7 @@ def load_data(fname):
 
             if label and qid:
                 label = label.group(1)
-                label = label == "positive"
+                label = 1 if label == "positive" else 0
                 answer = line.lower().split("\t")
                 answer_count += 1
 
@@ -270,15 +270,15 @@ if __name__ == "__main__":
                 i, unjudged_count = 0, 0
 
                 for key, value in scored_candidates.items():
-                  jaccard_similarity = value[1]
-                  i += 1
+                    jaccard_similarity = value[1]
+                    i += 1
 
-                # check if the answer already exists in the TrecQA test set
-                if jaccard_similarity >= threshold:
-                    doc_id = value[0][0]
-                    if doc_id not in seen_docs:
-                        out.write("{} Q0 {} {} {} TRECQA\n".format(qid, doc_id, i, value[2]))
-                        seen_docs.append(doc_id)
+                    # check if the answer already exists in the TrecQA test set
+                    if jaccard_similarity >= threshold:
+                        doc_id = value[0][0]
+                        if doc_id not in seen_docs:
+                            out.write("{} Q0 {} {} {} TRECQA\n".format(qid, doc_id, i, value[2]))
+                            seen_docs.append(doc_id)
                     else:
                         unjudged_count += 1
                         doc_id = "unjudged{}".format(unjudged_count)
