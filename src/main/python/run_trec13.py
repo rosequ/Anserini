@@ -1,11 +1,11 @@
 import argparse
-import os
 import re
 
+import xml.etree.ElementTree as ET
 from nltk.tokenize import TreebankWordTokenizer
 from pyserini import Pyserini
 from sm_cnn.bridge import SMModelBridge
-import hashlib
+
 
 class QAModel:
     instance = None
@@ -37,8 +37,11 @@ def get_answers(pyserini, question, h0, h1, model_choice, index_path, w2v_cache=
         answers_list = qa_DL_model.rerank_candidate_answers(question, candidate_passages_scores, idf_json, flags)
         sorted_answers = sorted(answers_list, key=lambda x: x[0], reverse=True)
 
-        for candidate, docid, score in sorted_answers:
-            tokens = TreebankWordTokenizer().tokenize(candidate.lower().split("\t")[0])
+        for score, candidate in sorted_answers:
+            answer = candidate.lower().split("\t")
+            docid = answer[1]
+            score = answer[2]
+            tokens = TreebankWordTokenizer().tokenize(answer[0])
             docid = "".join(docid.lower().split())
             tokeninzed_answer.append((tokens, docid, score))
         return tokeninzed_answer
@@ -50,47 +53,42 @@ def get_answers(pyserini, question, h0, h1, model_choice, index_path, w2v_cache=
             docid = "".join(docid.split())
             # print(docid)
             tokeninzed_answer.append((tokens, docid, score))
-        return tokeninzed_answer
+    return tokeninzed_answer
 
 def load_data(fname):
     questions = []
-    answers = {}
-    labels = {}
-    prev = ''
-    answer_count = 0
+    qids = []
+    tree_root = ET.parse(fname).getroot()
 
-    with open(fname, 'r') as f:
-        for line in f:
-            line = line.strip()
-            qid_match = re.match('<QApairs id=\'(.*)\'>', line)
+    for target in tree_root.findall('target'):
+        for qa in target.findall('qa'):
+            for q in qa.findall('q'):
+                qid = q.get('id')
+                type = q.get('type')
+                if '.1' in qid and type == 'FACTOID':
+                    tokenized_question = TreebankWordTokenizer().tokenize(q.text.strip())
+                    questions.append((qid, '\t'.join(tokenized_question)))
 
-            if qid_match:
-                answer_count = 0
-                qid = qid_match.group(1)
+    return questions
 
-                if qid not in answers:
-                    answers[qid] = []
-
-                if qid not in labels:
-                    labels[qid] = {}
-
-            if prev and prev.startswith('<question>'):
-                questions.append(line)
-
-            label = re.match('^<(positive|negative)>', prev)
-
-            if label:
-                label = label.group(1)
-                label = 1 if label == 'positive' else 0
-                answer = line.lower().split('\t')
-                answer_count += 1
-
-                answer_id = 'Q{}-A{}'.format(qid, answer_count)
-                answers[qid].append((answer_id, answer, label))
-                labels[qid][answer_id] = label
-            prev = line
-
-    return questions, answers, labels
+# def load_data(fname):
+#   questions = []
+#   prev = ''
+#
+#   with open(fname, 'r') as f:
+#     for line in f:
+#       line = line.strip()
+#       qid_match = re.match('<QApairs id=\'(.*)\'>', line)
+#
+#       if qid_match:
+#         qid = qid_match.group(1)
+#
+#       if prev and prev.startswith('<question>'):
+#         questions.append((qid, line))
+#
+#       prev = line
+#
+#   return questions
 
 def separate_docs(pattern):
     doc_pats = pattern.split()
@@ -118,10 +116,13 @@ def eval_by_pattern(qid, candidate, pattern):
 
     # print(qid, docid, this_candidate)
     result = re.findall(r'{}'.format(pattern.lower()), this_candidate)
+
     if result and docid in docs:
         print(qid, docid)
         correct += 1
-        total_correct += 1
+    total_correct += 1
+    # else:
+        # print("unmatched:{}, {}, {}".format(qid, docid, candidate, pattern))
 
 
 if __name__ == "__main__":
@@ -159,17 +160,26 @@ if __name__ == "__main__":
                     pattern_dict[det[0]] = det[1]
 
     pyserini = Pyserini(args.index)
-    questions, answers, labels_actual = load_data(args.input)
+    questions = load_data(args.input)
 
-    for qid, question in zip(answers.keys(), questions):
+    for question_det in questions:
         # sentence re-ranking after ad-hoc retrieval
+        qid, question = question_det[0], question_det[1]
         candidates = get_answers(pyserini, question, int(args.h0), int(args.h1), args.model, args.index, args.w2v_cache,
-                               args.qa_model_file)
+                                 args.qa_model_file)
 
         try:
+            # print(qid)
+            # if "57" not in qid:
+            #     continue
+            # else:
+                # print(question)
             eval_by_pattern(qid, candidates[0], pattern_dict[qid])
+            # eval_by_pattern(qid, candidates[1], pattern_dict[qid])
+            # eval_by_pattern(qid, candidates[2], pattern_dict[qid])
         except KeyError as e:
             print("Pattern not found for question: {}".format(e))
 
-    print("Accuracy:{}".format(str(correct/62)))
+    print("There were {} initial anwers".format(str(total_correct)))
+    print("Accuracy:{}".format(str(correct/total_correct)))
 
